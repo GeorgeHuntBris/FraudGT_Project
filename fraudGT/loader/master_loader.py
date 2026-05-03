@@ -10,7 +10,7 @@ import scipy.sparse as sp
 import torch
 import torch.nn as nn
 import torch_geometric.transforms as T
-from torch_sparse import SparseTensor
+from torch_geometric.typing import SparseTensor
 from numpy.random import default_rng
 from sklearn.model_selection import train_test_split
 
@@ -20,6 +20,11 @@ from ogb.nodeproppred import PygNodePropPredDataset
 from torch_geometric.datasets import (DBLP, IMDB, OGB_MAG, Planetoid, MovieLens)
 from fraudGT.datasets.aml_dataset import AMLDataset
 from fraudGT.datasets.eth_dataset import ETHDataset
+from fraudGT.datasets.eth_aux_dataset import ETHAuxDataset
+from fraudGT.datasets.elliptic_dataset import EllipticDataset
+from fraudGT.datasets.dgraph_dataset import DGraphDataset
+from fraudGT.datasets.ethereump_dataset import EthereumPDataset
+from fraudGT.datasets.bitcoinm_dataset import BitcoinMDataset
 from fraudGT.datasets.temporal_dataset import TemporalDataset
 from fraudGT.graphgym.config import cfg
 from fraudGT.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
@@ -224,6 +229,27 @@ def load_dataset_master(format, name, dataset_dir):
         dataset_dir = osp.join(dataset_dir, format)
         dataset = preformat_ETH(dataset_dir)
 
+    elif format == 'ETH-Aux':
+        dataset_dir = osp.join(dataset_dir, 'ETH')
+        dataset = preformat_ETH_Aux(dataset_dir)
+
+    # Add case for Elliptic dataset
+    elif format == 'Elliptic':
+        dataset_dir = osp.join(dataset_dir, format)
+        dataset = preformat_Elliptic(dataset_dir, name)
+
+    elif format == 'DGraph':
+        dataset_dir = osp.join(dataset_dir, format)
+        dataset = preformat_DGraph(dataset_dir)
+
+    elif format == 'BitcoinM':
+        dataset_dir = osp.join(dataset_dir, format)
+        dataset = preformat_BitcoinM(dataset_dir)
+
+    elif format == 'EthereumP':
+        dataset_dir = osp.join(dataset_dir, format)
+        dataset = preformat_EthereumP(dataset_dir)
+
     else:
         raise ValueError(f"Unknown data format: {format}")
 
@@ -351,7 +377,7 @@ def load_dataset_master(format, name, dataset_dir):
                 torch.save(results, file_path)
             
             from tqdm import tqdm
-            results = torch.load(file_path)
+            results = torch.load(file_path, weights_only=False)
             data_list = []
             for i in tqdm(range(len(dataset)),
                         mininterval=10,
@@ -767,7 +793,7 @@ def preformat_OGB_Node(dataset_dir, name):
             data['institution'].x = x[dataset.num_papers+dataset.num_authors :]
 
             path = f'{dataset.dir}/full_adj_t.pt'
-            adj_t_dict = torch.load(path)
+            adj_t_dict = torch.load(path, weights_only=False)
             for edge_type, adj_t in adj_t_dict.items():
                 data[edge_type].adj_t = adj_t
 
@@ -784,7 +810,7 @@ def preformat_OGB_Node(dataset_dir, name):
             os.mkdir(path)
             torch.save(data, osp.join(path, 'data.pt'))
     else:
-        data = torch.load(osp.join(path, 'data.pt'))
+        data = torch.load(osp.join(path, 'data.pt'), weights_only=False)
     
     r'''A fake OGB dataset. 
     Once the OGB dataset is preprocessed and transformed to sparse format, the original OGB
@@ -833,6 +859,70 @@ def preformat_ETH(dataset_dir):
                          add_ports=cfg.dataset.add_ports)
     return dataset
 
+
+def preformat_ETH_Aux(dataset_dir):
+    """Load ETH dataset with auxiliary soft edge labels."""
+    dataset = ETHAuxDataset(root=dataset_dir, reverse_mp=cfg.dataset.reverse_mp,
+                            add_ports=cfg.dataset.add_ports)
+    return dataset
+
+
+def preformat_Elliptic(dataset_dir, name):
+    """Load and preformat Elliptic Bitcoin dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+        name: name of the dataset (default: 'elliptic')
+
+    Returns:
+        PyG dataset object
+    """
+    dataset = EllipticDataset(root=dataset_dir, name=name, reverse_mp=cfg.dataset.reverse_mp,
+                              add_ports=cfg.dataset.add_ports)
+    return dataset
+
+
+
+def preformat_DGraph(dataset_dir):
+    """Load and preformat DGraph-Fin fraud detection dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+
+    Returns:
+        PyG dataset object
+    """
+    dataset = DGraphDataset(root=dataset_dir, reverse_mp=cfg.dataset.reverse_mp,
+                            add_ports=cfg.dataset.add_ports)
+    return dataset
+
+
+def preformat_BitcoinM(dataset_dir):
+    """Load and preformat Bitcoin-M illicit transaction detection dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+
+    Returns:
+        PyG dataset object
+    """
+    dataset = BitcoinMDataset(root=dataset_dir, reverse_mp=cfg.dataset.reverse_mp,
+                              add_ports=cfg.dataset.add_ports)
+    return dataset
+
+
+def preformat_EthereumP(dataset_dir):
+    """Load and preformat Ethereum-P phishing detection dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+
+    Returns:
+        PyG dataset object
+    """
+    dataset = EthereumPDataset(root=dataset_dir, reverse_mp=cfg.dataset.reverse_mp,
+                               add_ports=cfg.dataset.add_ports)
+    return dataset
 
 
 def join_dataset_splits(datasets):

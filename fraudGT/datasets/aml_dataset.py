@@ -3,9 +3,12 @@ import sys, os
 import os.path as osp
 import pandas as pd
 import numpy as np
-import datatable as dt
 from datetime import datetime
-from datatable import f,join,sort
+try:
+    import datatable as dt
+    from datatable import f, join, sort
+except ImportError:
+    dt = None  # datatable not available on Python 3.14
 from collections import defaultdict
 from typing import Callable, List, Optional
 
@@ -146,14 +149,14 @@ class AMLDataset(TemporalDataset):
         assert self.name.split('-')[0] in self.dataset_sizes
         assert self.name.split('-')[1] in self.dataset_rates
         super().__init__(root, transform, pre_transform)
-        self.data_dict = torch.load(self.processed_paths[0])
+        self.data_dict = torch.load(self.processed_paths[0], weights_only=False)
         # del self._data['node'].x
         if not reverse_mp:
             for split in ['train', 'val', 'test']:
                 del self.data_dict[split]['node', 'rev_to', 'node']
             # del self.slices['node', 'rev_to', 'node']
         if add_ports:
-            self.ports_dict = torch.load(self.processed_paths[1])
+            self.ports_dict = torch.load(self.processed_paths[1], weights_only=False)
             for split in ['train', 'val', 'test']:
                 self.data_dict[split] = self.add_ports_func(self.data_dict[split], self.ports_dict[split])
 

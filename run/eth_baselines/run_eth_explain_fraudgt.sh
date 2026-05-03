@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH --job-name=ETH-FraudGT-Explain
+#SBATCH --partition=gpu
+#SBATCH --account=COMS037985
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=24G
+#SBATCH --time=2:00:00
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+
+echo "Job started: $(date)"
+echo "Running on node: $(hostname)"
+echo "GPU allocated: $CUDA_VISIBLE_DEVICES"
+
+source ~/fraudgt-env/bin/activate
+export PATH=$PATH:/usr/bin
+
+cd $SLURM_SUBMIT_DIR
+mkdir -p logs
+
+python -m fraudGT.explain.explain_fraudgt \
+    --cfg configs/ETH/ETH-SparseNodeGT.yaml \
+    --gpu 0 \
+    num_threads 6 num_workers 0 train.persistent_workers False
+echo "Python exit code: $?"
+
+echo "Job finished: $(date)"
